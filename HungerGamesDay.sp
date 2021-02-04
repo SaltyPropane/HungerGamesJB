@@ -10,12 +10,15 @@
 #include <basecomm>
 #include <cstrike>
 
+
 #pragma newdecls required
 
 //ConVars
 ConVar g_cvFriendlyFire;
 float g_fctSpawnLocation[3];
 bool CanPluginRun;
+bool g_bHungerGamesDay;
+
 
 
 public Plugin myinfo = 
@@ -29,16 +32,22 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-    RegAdminCmd("sm_hg", Command_HungerGames, ADMFLAG_CUSTOM5);
+    RegAdminCmd("sm_hg", Command_HungerGames, ADMFLAG_CHANGEMAP);
     g_cvFriendlyFire = FindConVar("mp_teammates_are_enemies");
     HookEvent("round_end", Event_OnRoundEnd);
     HookEvent("player_death",Event_PlayerDeath);
+}
 
+void InitPrecache()
+{
+    AddFileToDownloadsTable("sound/hungergames/cannon.mp3");
+    PrecacheSound("hungergames/cannon.mp3");
 }
 
 public void OnMapStart()
 {
     CanPluginRun = true;
+    InitPrecache();
 }
 
 void ChangePluginRun()
@@ -91,7 +100,7 @@ public Action setFreeze(Handle timer)
     
     for(int i = 1; i <= 5; i++)
     {
-        PrintToChatAll(" \x02[SM] \x0CT's are now Frozen for 15 seconds.");
+        PrintToChatAll(" \x02[SM] \x0CT's are now Frozen for 5 seconds.");
     }
     FindCTSpawn();
     teleport();
@@ -166,7 +175,7 @@ public Action Command_HungerGames(int client, int args)
     setFreezeTimer();
     setUnFreezeTimer();
     setffTimer();
-
+    g_bHungerGamesDay = true;
     ChangePluginRun();
     return Plugin_Handled;
     
@@ -175,6 +184,18 @@ public Action Command_HungerGames(int client, int args)
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
+    if(!g_bHungerGamesDay)
+    {
+        return;
+    }
+
+
+    int client = GetClientOfUserId(event.GetInt("userid"));
+    if (client && IsClientInGame(client) && GetClientTeam(client) == CS_TEAM_T)
+    {
+        EmitSoundToAll("hungergames/cannon.mp3");
+    }
+
     int count = 0;
     //checks to see how many are alive
     for(int i = 1; i <= MaxClients; i++)
@@ -184,6 +205,8 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             count++;
         }
     }
+
+
 
     if(count <= 1)
     {
@@ -200,5 +223,9 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
 public void Event_OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-    g_cvFriendlyFire.SetBool(false);
+    if(g_bHungerGamesDay)
+    {
+        g_cvFriendlyFire.SetBool(false);
+        g_bHungerGamesDay = false;
+    }
 }
