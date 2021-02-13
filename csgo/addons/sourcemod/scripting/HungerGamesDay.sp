@@ -53,6 +53,8 @@ void InitPrecache()
 {
     AddFileToDownloadsTable("sound/hungergames/cannon1.mp3");
     AddFileToDownloadsTable("sound/hungergames/countdown.mp3");
+    AddFileToDownloadsTable("sound/warden/taken.mp3");
+    PrecacheSound("warden/taken.mp3");
     PrecacheSound("hungergames/countdown.mp3");
     PrecacheSound("hungergames/cannon1.mp3");
 
@@ -93,20 +95,12 @@ public Action Timer_Beacon(Handle timer, any serial)
     float fTargetPos[3];
     GetClientAbsOrigin(iTarget, fTargetPos);
 
-    TE_SetupBeamRingPoint(fTargetPos, 20.0, 200.0, g_iModelSprite,
+    TE_SetupBeamRingPoint(fTargetPos, 20.0, 600.0, g_iModelSprite,
                           g_iHaloSprite, 0, 60, 1.0, 7.0, 0.5,
                           view_as<int>({255, 0, 0, 255}), 3, 0);
     TE_SendToAll();
-    
     return Plugin_Continue;
 }
-
-    
-
-
-
-
-
 /////////////////////////////////////////////////////////////////
 
 public void OnClientDisconnect(int client)
@@ -287,7 +281,19 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             count++;
         }
     }
-    if(count <= 5)
+    if(count <= 5 && count > 1)
+    {
+        for(int i = 1; i <= MaxClients; i++)
+        {
+            if(IsClientInGame(i) && IsPlayerAlive(i) && GetClientTeam(i) == CS_TEAM_T)
+            {
+                ToggleBeacon(i);
+                EmitSoundToAll("warden/taken.mp3");
+            }
+        }
+    }
+
+    if(count <= 1)
     {
         for(int i = 1; i <= MaxClients; i++)
         {
@@ -296,7 +302,6 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
                 ToggleBeacon(i);
             }
         }
-
     }
 
     if(count <= 1)
@@ -335,5 +340,9 @@ public void Event_OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
 
         g_cvFriendlyFire.SetBool(false);
         g_bHungerGamesDay = false;
+        for (int client = 0; client <= MaxClients; client++)
+        {
+            g_bBeacon[client] = false;
+        }   
     }
 }
